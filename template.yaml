@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: EKS Cluster and Nodes
+Parameters:
+  ENV:
+    Type: String
+    Default: development
+    AllowedValues:
+      - development
+      - production
+  VPCid:
+    Type: String
+    Default: 'vpc-03f1a674c2498f0fd'
+    Description: A valid VPC ID
+  SGIds:
+    Type: CommaDelimitedList
+    Default: 'sg-06465d3ecc8e60df1'
+    Description: A valid security group ID (Inbound traffic must be allowed for Host port)
+  PubSubNetIds: 
+    Type: CommaDelimitedList
+    Default: 'subnet-0cb67c09605866662,subnet-0ed2f32ce0730ca79'
+    Description: A public subnet (IGW attached and Inbound & outbound access allowed for Host Port parameter value )
+Resources:
+  EKSCluster:
+      Type: AWS::EKS::Cluster
+      Properties:
+        Name: Test-cluster
+        Version: "1.20"
+        RoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/ekscluster
+        ResourcesVpcConfig:
+          SecurityGroupIds: !Ref SGIds
+          SubnetIds: !Ref PubSubNetIds
+          EndpointPublicAccess: true
+          EndpointPrivateAccess: false
+          PublicAccessCidrs: [ "0.0.0.0/0" ]
+        Logging:
+          ClusterLogging:
+            EnabledTypes:
+              - Type: api
+              - Type: audit
+        Tags:
+          - Key: "key"
+            Value: "val"
+  EKSNodegroup:
+    Type: 'AWS::EKS::Nodegroup'
+    Properties:
+      AmiType: BOTTLEROCKET_x86_64
+      CapacityType: ON_DEMAND
+      ClusterName: !Ref EKSCluster
+      DiskSize: 20
+      InstanceTypes: 
+        - t3.medium
+      NodegroupName: Test-NodeGroup
+      #https://docs.aws.amazon.com/eks/latest/userguide/create-node-role.html
+      NodeRole: !Sub arn:aws:iam::${AWS::AccountId}:role/AmazonEksManagedNode
+      ScalingConfig:
+        MinSize: 2
+        DesiredSize: 2
+        MaxSize: 7
+      Labels:
+        Key1: Value1
+        Key2: Value2
+      Subnets: !Ref PubSubNetIds

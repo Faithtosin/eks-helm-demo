@@ -1,0 +1,4 @@
+apiVersion: v2
+name: helloworld
+description: helloworld chart that runs on kubernetes
+version: 0.1.0
